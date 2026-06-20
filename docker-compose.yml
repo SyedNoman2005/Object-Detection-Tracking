@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - media_volume:/app/media
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DEVICE=cpu # Change to cuda for GPU support
+
+  celery_worker:
+    build: ./backend
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    volumes:
+      - ./backend/app:/app/app
+      - media_volume:/app/media
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DEVICE=cpu # Change to cuda for GPU support
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  media_volume:
